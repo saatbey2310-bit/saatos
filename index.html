@@ -1,29 +1,60 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<title>PS4 Output</title>
-<style>
-    body {
-        background-color: #000000;
-        color: #00ffcc;
-        font-family: monospace;
-        padding: 40px;
-        margin: 0;
-    }
-    h1 {
-        color: #38bdf8;
-        font-size: 2rem;
-    }
-    p {
-        font-size: 1.2rem;
-        margin-top: 10px;
-    }
-</style>
+    <meta charset="UTF-8">
+    <title>⚡ ENI & PS4 Extensionless JS Loader ⚡</title>
+    <style>
+        body {
+            background-color: #1e1e2e;
+            color: #cdd6f4;
+            font-family: 'Consolas', monospace;
+            text-align: center;
+            padding-top: 50px;
+        }
+        h1 {
+            color: #cba6f7;
+        }
+        .console-box {
+            background-color: #11111b;
+            color: #a6e3a1;
+            width: 80%;
+            height: 300px;
+            margin: 20px auto;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #313244;
+            text-align: left;
+            overflow-y: auto;
+            font-size: 14px;
+        }
+        .btn {
+            background-color: #89b4fa;
+            color: #1e1e2e;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background-color: #b4befe;
+        }
+    </style>
 </head>
 <body>
-    <h1>[PS4_SUCCESS]</h1>
-    <p>> Yazı nihayet PS4 ekranında!</p>
-    <p>> Vanguard yok, kaos yok, huzur var 💀.</p>
+
+    <h1>⚡ PS4 Extensionless Script Loader ⚡</h1>
+    <p>Target: Loading script named strictly as 'index'</p>
+
+    <div class="console-box" id="console">
+        [+] HTML Loaded. Waiting for extensionless script execution...<br>
+    </div>
+
+    <button class="btn" onclick="triggerExploit()">🚀 Trigger Extensionless Exploit</button>
+
+    <!-- Uzantısız dosya adı referansı -->
+    <script src="index"></script>
 </body>
 </html>
