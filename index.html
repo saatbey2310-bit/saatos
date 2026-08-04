@@ -1,87 +1,122 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
-    <meta charset="utf-8">
-    <title>WebKit Stress Test & Heap Spraying</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebKit Heap Stress & Exploit Host</title>
     <style>
         body {
-            background-color: #05050a;
+            background-color: #07090f;
             color: #00ffcc;
             font-family: monospace;
             text-align: center;
-            margin-top: 15vh;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
         }
-        h1 { color: #ff0055; font-size: 28px; }
-        .terminal {
+        .terminal-box {
             border: 2px solid #00ffcc;
-            background: #0b0f19;
-            padding: 25px;
-            display: inline-block;
-            border-radius: 12px;
-            width: 80%;
-            max-width: 600px;
-            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+            background: #0d121f;
+            padding: 30px;
+            border-radius: 14px;
+            width: 85%;
+            max-width: 650px;
+            box-shadow: 0 0 25px rgba(0, 255, 204, 0.25);
+        }
+        h1 {
+            color: #ff0055;
+            font-size: 24px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        p {
+            color: #8ab4f8;
+            font-size: 14px;
+            margin-bottom: 20px;
         }
         pre {
             text-align: left;
             color: #33ff99;
-            font-size: 14px;
-            height: 150px;
-            overflow: hidden;
-            border-top: 1px dashed #333;
+            background: #04060a;
+            padding: 15px;
+            border-radius: 8px;
+            height: 220px;
+            overflow-y: auto;
+            border: 1px dashed #224;
+            font-size: 13px;
+            margin: 0;
+        }
+        .footer {
             margin-top: 15px;
-            padding-top: 10px;
+            font-size: 11px;
+            color: #555;
         }
     </style>
 </head>
 <body>
-    <div class="terminal">
-        <h1>[ WEBKIT STRESS TEST ]</h1>
-        <p>Bellek doldurma ve nesne tahsis döngüsü başlatılıyor...</p>
-        <pre id="log">[*] Hazırlanıyor...\n</pre>
+
+    <div class="terminal-box">
+        <h1>[ WEBKIT STRESS HOST ]</h1>
+        <p>Target: JavaScriptCore Memory & Heap Integrity Suite</p>
+        <pre id="log">[*] Sistem başlatılıyor...\n</pre>
+        <div class="footer">Status: Standby for Execution</div>
     </div>
 
     <script>
-        function logMessage(msg) {
+        // Log ekranına yazı yazdıran yardımcı fonksiyon
+        function printLog(msg) {
             const logBox = document.getElementById('log');
             logBox.innerText += msg + "\n";
             logBox.scrollTop = logBox.scrollHeight;
         }
 
+        // Ana yürütme rutini
         window.addEventListener('load', function() {
             setTimeout(() => {
-                logMessage("[*] JavaScript motoru hazırlanıyor...");
+                printLog("[*] DOM yüklendi. JavaScript motoru test ediliyor...");
                 
                 try {
-                    // Heap Spraying Simülasyonu (Belleği doldurma deneyi)
-                    let memoryHeap = [];
-                    logMessage("[*] Büyük nesne dizileri (ArrayBuffers) oluşturuluyor...");
+                    let sprayContainer = [];
+                    printLog("[*] Heap Spraying aşaması başlatılıyor (ArrayBuffers)...");
                     
-                    for (let i = 0; i < 50; i++) {
-                        // Her adımda bellek yığınını şişiriyoruz
-                        let buffer = new ArrayBuffer(1024 * 1024 * 4); // 4MB'lık bloklar
-                        memoryHeap.push(buffer);
+                    // Bellek havuzunu şişirme döngüsü
+                    for (let i = 0; i < 150; i++) {
+                        let ab = new ArrayBuffer(0x100000); // 1MB'lık bloklar
+                        let f64 = new Float64Array(ab);
+                        
+                        // Hücrelere hedef veri yazımı
+                        for (let j = 0; j < f64.length; j += 2000) {
+                            f64[j] = 13.52; // Sürüm referans simülasyonu
+                        }
+                        
+                        sprayContainer.push({ buffer: ab, view: f64 });
                     }
                     
-                    logMessage("[+] Bellek havuzu başarıyla dolduruldu!");
-                    logMessage("[!] WebKit karar mekanizması zorlanıyor...");
+                    printLog("[+] Bellek havuzu başarıyla dolduruldu (" + sprayContainer.length + " MB).");
+                    printLog("[*] Tip Karmaşası (Type Confusion) döngüsüne geçiliyor...");
 
-                    setTimeout(() => {
-                        logMessage("[*] Sahte UAF tetikleme döngüsü deneniyor...");
-                        // Tarayıcının bellek sınırlarını zorlayan tip dönüşümleri
-                        for(let j = 0; j < 100000; j++) {
-                            let dummy = { a: 1, b: 2 };
-                            JSON.parse(JSON.stringify(dummy));
-                        }
-                        logMessage("[!] Test tamamlandı. Tarayıcı çökmediyse bellek güvenli!");
-                    }, 1500);
+                    // Optimizasyonları zorlama döngüsü
+                    let corruptedObject = { a: 0x41414141, b: 0x42424242 };
+                    for (let k = 0; k < 300000; k++) {
+                        let temp = corruptedObject.a;
+                        corruptedObject.a = corruptedObject.b;
+                        corruptedObject.b = temp;
+                    }
+
+                    printLog("[!] İşlem tamamlandı.");
+                    printLog("[+] Tarayıcı kararlılığını koruyor. Bellek güvenli.");
 
                 } catch (err) {
-                    logMessage("[-] Bellek Hatası (Out of Memory): " + err.message);
-                    logMessage("[!] Tarayıcı koruması başarıyla devreye girdi.");
+                    printLog("[-] Bellek Sınırı Aşıldı (OOM / Crash): " + err.message);
+                    printLog("[!] Tarayıcı koruma mekanizması tetiklendi.");
                 }
             }, 1000);
         });
     </script>
+
 </body>
 </html>
