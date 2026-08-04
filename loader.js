@@ -1,4 +1,4 @@
-async function loadRealBinary() {
+async function loadPureBinaryPayload() {
     const fileName = document.getElementById('binName').value.trim();
     const logBox = document.getElementById('log');
 
@@ -12,46 +12,41 @@ async function loadRealBinary() {
         return;
     }
 
-    // GitHub repo bilgilerin
     const username = "saatbey2310-bit";
     const repo = "saatos";
     const branch = "main";
     const rawUrl = `https://raw.githubusercontent.com/${username}/${repo}/${branch}/${fileName}`;
 
-    log("\n[*] İstek atılıyor: " + rawUrl);
+    log("\n[*] Ham binary talep ediliyor: " + rawUrl);
 
     try {
         const response = await fetch(rawUrl);
         if (!response.ok) {
-            throw new Error(`HTTP Hata Kodu: {response.status} (Dosya repoda yok!)`);
+            throw new Error(`HTTP Hata: ${response.status} (Dosya ham olarak çekilemedi!)`);
         }
 
-        // 1. Ham .bin dosyasını gerçek ArrayBuffer olarak çekiyoruz
-        const arrayBuffer = await response.arrayBuffer();
-        log("[+] Başarılı! Ham .bin dosyası belleğe indirildi. Boyut: " + arrayBuffer.byteLength + " bayt.");
-
-        // 2. JavaScript Bellek Havuzu (Heap Spraying / Slot Yönetimi)
-        log("[*] Bellek slotları (TypedArray havuzu) hazırlanıyor...");
-        let heapSprayPool = [];
-        for (let i = 0; i < 64; i++) {
-            // Her biri knote yapısını (0x80 bayt / 128 byte) temsil eden bellek blokları
-            heapSprayPool.push(new ArrayBuffer(128));
-        }
-        log("[+] 64 adet bellek bloğu heap alanına püskürtüldü.");
-
-        // 3. DataView ve Uint8Array ile ham bellek manipülasyonu (UAF / Tip Karmaşası Mantığı)
-        const targetView = new DataView(arrayBuffer);
-        const memoryView = new Uint8Array(arrayBuffer);
-
-        // İlk baytların analizi
-        let hexBytes = [];
-        for (let i = 0; i < Math.min(memoryView.length, 16); i++) {
-            hexBytes.push('0x' + memoryView[i].toString(16).padStart(2, '0'));
+        // Doğrudan ham ikili veri (binary) olarak belleğe alıyoruz
+        const rawBuffer = await response.arrayBuffer();
+        
+        if (rawBuffer.byteLength === 0) {
+            throw new Error("Dosya boş (0 bayt) veya yanlış format!");
         }
 
-        log("[*] Hedef Bellek Alanı (ArrayBuffer): Aktif");
-        log("[*] İlk 16 Bayt (Hex): " + hexBytes.join(' '));
-        log("[+] UAF / Binary akışı JavaScript belleğinde başarıyla işlendi ve kilitlendi!");
+        log("[+] Ham .bin dosyası başarıyla indirildi!");
+        log("[+] Toplam Boyut: " + rawBuffer.byteLength + " bayt.");
+
+        // Saf Uint8Array görünümü (HTML veya metin dönüşümü yok, saf binary)
+        const pureBytes = new Uint8Array(rawBuffer);
+
+        // İlk 16 baytın saf Hex dökümü
+        let hexOutput = [];
+        for (let i = 0; i < Math.min(pureBytes.length, 16); i++) {
+            hexOutput.push('0x' + pureBytes[i].toString(16).padStart(2, '0'));
+        }
+
+        log("[*] Veri Tipi: Saf Binary (ArrayBuffer / Uint8Array)");
+        log("[*] İlk 16 Ham Bayt: " + hexOutput.join(' '));
+        log("[+] İşlem tamamlandı: Payload ham binary olarak belleğe oturtuldu!");
 
     } catch (err) {
         log("[-] Kritik Hata: " + err.message);
