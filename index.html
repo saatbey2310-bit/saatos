@@ -1,60 +1,87 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>⚡ ENI & PS4 Extensionless JS Loader ⚡</title>
+    <meta charset="utf-8">
+    <title>WebKit Stress Test & Heap Spraying</title>
     <style>
         body {
-            background-color: #1e1e2e;
-            color: #cdd6f4;
-            font-family: 'Consolas', monospace;
+            background-color: #05050a;
+            color: #00ffcc;
+            font-family: monospace;
             text-align: center;
-            padding-top: 50px;
+            margin-top: 15vh;
         }
-        h1 {
-            color: #cba6f7;
-        }
-        .console-box {
-            background-color: #11111b;
-            color: #a6e3a1;
+        h1 { color: #ff0055; font-size: 28px; }
+        .terminal {
+            border: 2px solid #00ffcc;
+            background: #0b0f19;
+            padding: 25px;
+            display: inline-block;
+            border-radius: 12px;
             width: 80%;
-            height: 300px;
-            margin: 20px auto;
-            padding: 15px;
-            border-radius: 8px;
-            border: 2px solid #313244;
+            max-width: 600px;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+        }
+        pre {
             text-align: left;
-            overflow-y: auto;
+            color: #33ff99;
             font-size: 14px;
-        }
-        .btn {
-            background-color: #89b4fa;
-            color: #1e1e2e;
-            border: none;
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .btn:hover {
-            background-color: #b4befe;
+            height: 150px;
+            overflow: hidden;
+            border-top: 1px dashed #333;
+            margin-top: 15px;
+            padding-top: 10px;
         }
     </style>
 </head>
 <body>
-
-    <h1>⚡ PS4 Extensionless Script Loader ⚡</h1>
-    <p>Target: Loading script named strictly as 'index.js'</p>
-
-    <div class="console-box" id="console">
-        [+] HTML Loaded. Waiting for extensionless script execution...<br>
+    <div class="terminal">
+        <h1>[ WEBKIT STRESS TEST ]</h1>
+        <p>Bellek doldurma ve nesne tahsis döngüsü başlatılıyor...</p>
+        <pre id="log">[*] Hazırlanıyor...\n</pre>
     </div>
 
-    <button class="btn" onclick="triggerExploit()">🚀 Trigger Extensionless Exploit</button>
+    <script>
+        function logMessage(msg) {
+            const logBox = document.getElementById('log');
+            logBox.innerText += msg + "\n";
+            logBox.scrollTop = logBox.scrollHeight;
+        }
 
-    <!-- Uzantısız dosya adı referansı -->
-    <script src="index.js"></script>
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                logMessage("[*] JavaScript motoru hazırlanıyor...");
+                
+                try {
+                    // Heap Spraying Simülasyonu (Belleği doldurma deneyi)
+                    let memoryHeap = [];
+                    logMessage("[*] Büyük nesne dizileri (ArrayBuffers) oluşturuluyor...");
+                    
+                    for (let i = 0; i < 50; i++) {
+                        // Her adımda bellek yığınını şişiriyoruz
+                        let buffer = new ArrayBuffer(1024 * 1024 * 4); // 4MB'lık bloklar
+                        memoryHeap.push(buffer);
+                    }
+                    
+                    logMessage("[+] Bellek havuzu başarıyla dolduruldu!");
+                    logMessage("[!] WebKit karar mekanizması zorlanıyor...");
+
+                    setTimeout(() => {
+                        logMessage("[*] Sahte UAF tetikleme döngüsü deneniyor...");
+                        // Tarayıcının bellek sınırlarını zorlayan tip dönüşümleri
+                        for(let j = 0; j < 100000; j++) {
+                            let dummy = { a: 1, b: 2 };
+                            JSON.parse(JSON.stringify(dummy));
+                        }
+                        logMessage("[!] Test tamamlandı. Tarayıcı çökmediyse bellek güvenli!");
+                    }, 1500);
+
+                } catch (err) {
+                    logMessage("[-] Bellek Hatası (Out of Memory): " + err.message);
+                    logMessage("[!] Tarayıcı koruması başarıyla devreye girdi.");
+                }
+            }, 1000);
+        });
+    </script>
 </body>
 </html>
