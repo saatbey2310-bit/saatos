@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Binary & JS Payload Loader</title>
+    <title>GitHub Repo Dosya Okuyucu</title>
     <style>
         body {
             background-color: #07090f;
@@ -41,28 +41,25 @@
         .controls {
             margin-bottom: 15px;
             display: flex;
-            flex-direction: column;
             gap: 10px;
-            align-items: center;
+            justify-content: center;
         }
-        .row {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        select, input[type="file"], button {
+        input[type="text"], button {
             background: #04060a;
             color: #00ffcc;
             border: 1px solid #00ffcc;
             padding: 8px 12px;
             font-family: monospace;
             border-radius: 5px;
-            cursor: pointer;
+        }
+        input[type="text"] {
+            width: 60%;
         }
         button:hover {
             background: #00ffcc;
             color: #04060a;
             font-weight: bold;
+            cursor: pointer;
         }
         pre {
             text-align: left;
@@ -70,7 +67,7 @@
             background: #04060a;
             padding: 12px;
             border-radius: 8px;
-            height: 180px;
+            height: 200px;
             overflow-y: auto;
             border: 1px dashed #224;
             font-size: 12px;
@@ -81,27 +78,15 @@
 <body>
 
     <div class="terminal-box">
-        <h1>[ BIN & JS PAYLOAD LOADER ]</h1>
-        <p>Yerel Dosya Okuyucu ve Bellek Enjeksiyon Paneli</p>
+        <h1>[ GITHUB REPO READER ]</h1>
+        <p>Repodaki Dosyayı Doğrudan Çek ve Oku</p>
         
         <div class="controls">
-            <div class="row">
-                <label for="payloadSelect">Hazır Seçenek:</label>
-                <select id="payloadSelect">
-                    <option value="stage1">Stage 1 (Simüle Edilmiş Baytlar)</option>
-                    <option value="stage2">Stage 2 (Kernel Yükü)</option>
-                </select>
-                <button onclick="loadPreset()">Çalıştır</button>
-            </div>
-            
-            <div class="row">
-                <label for="fileInput">Özel .bin / .js Seç:</label>
-                <input type="file" id="fileInput" accept=".bin,.js">
-                <button onclick="loadLocalFile()">Dosyayı Oku</button>
-            </div>
+            <input type="text" id="filePath" placeholder="örn: payload.js veya test.bin" value="payload.js">
+            <button onclick="fetchRepoFile()">Dosyayı Oku</button>
         </div>
 
-        <pre id="log">[*] Sistem hazır. Dosya seçin veya hazır paketlerden birini çalıştırın...\n</pre>
+        <pre id="log">[*] Sistem hazır. Okumak istediğin dosya adını yaz ve butona bas...\n</pre>
     </div>
 
     <script>
@@ -111,48 +96,52 @@
             logBox.scrollTop = logBox.scrollHeight;
         }
 
-        function loadPreset() {
-            const selected = document.getElementById('payloadSelect').value;
-            printLog("\n[*] Seçilen hazır paket okunuyor: " + selected.toUpperCase());
-            
-            setTimeout(() => {
-                if (selected === "stage1") {
-                    printLog("[+] Stage 1 başarıyla yüklendi. Boyut: 499 bayt.");
-                } else {
-                    printLog("[+] Stage 2 başarıyla yüklendi. Boyut: 356 bayt.");
-                }
-            }, 400);
-        }
-
-        function loadLocalFile() {
-            const fileInput = document.getElementById('fileInput');
-            if (fileInput.files.length === 0) {
-                printLog("[-] Hata: Lütfen önce bir dosya seçin!");
+        async function fetchRepoFile() {
+            const fileName = document.getElementById('filePath').value.trim();
+            if (!fileName) {
+                printLog("[-] Hata: Lütfen bir dosya adı girin!");
                 return;
             }
 
-            const file = fileInput.files[0];
-            printLog("\n[*] Dosya okunuyor: " + file.name);
+            // Kendi GitHub kullanıcı adını ve repo adını buraya yazıyorsun
+            // Örnek: https://raw.githubusercontent.com/kullaniciadin/repoadin/main/dosyaadi
+            const username = "saatbey2310-bit"; // Ekran görüntüsündeki kullanıcı adından alındı
+            const repo = "saatos"; // Ekran görüntüsündeki repo adından alındı
+            const branch = "main";
+            
+            const rawUrl = `https://raw.githubusercontent.com/${username}/${repo}/${branch}/${fileName}`;
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const buffer = e.target.result;
-                printLog("[+] Dosya başarıyla belleğe aktarıldı!");
-                printLog("[+] Dosya Boyutu: " + buffer.byteLength + " bayt.");
+            printLog("\n[*] Dosya talep ediliyor: " + fileName);
+            printLog("[*] URL: " + rawUrl);
+
+            try {
+                const response = await fetch(rawUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP Hata Kodu: ${response.status} (Dosya bulunamadı!)`);
+                }
+
+                const contentType = response.headers.get("content-type");
                 
-                // İstersen ArrayBuffer üzerinden bayt analizi simülasyonu
-                let view = new Uint8Array(buffer);
-                printLog("[*] İlk 4 bayt (Hex): " + 
-                    Array.from(view.slice(0, 4)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' ')
-                );
-            };
+                // Eğer metin tabanlı bir dosyaysa (.js, .txt, .html)
+                if (contentType && contentType.includes("text")) {
+                    const textData = await response.text();
+                    printLog("[+] Dosya başarıyla okundu (Metin):");
+                    printLog("----------------------------------------");
+                    printLog(textData);
+                } else {
+                    // Eğer binary (.bin) bir dosyaysa
+                    const buffer = await response.arrayBuffer();
+                    printLog("[+] Dosya başarıyla okundu (Binary):");
+                    printLog("[+] Boyut: " + buffer.byteLength + " bayt.");
+                    
+                    let view = new Uint8Array(buffer);
+                    let hexPreview = Array.from(view.slice(0, 16)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' ');
+                    printLog("[*] İlk 16 bayt (Hex): " + hexPreview);
+                }
 
-            reader.onerror = function() {
-                printLog("[-] Dosya okuma hatası!");
-            };
-
-            // Dosyayı ham binary veri (ArrayBuffer) olarak okuyoruz
-            reader.readAsArrayBuffer(file);
+            } catch (err) {
+                printLog("[-] Hata: " + err.message);
+            }
         }
     </script>
 
