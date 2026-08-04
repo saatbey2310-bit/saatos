@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Repo Dosya Okuyucu</title>
+    <title>PS4 Web Payload Loader & Fetcher</title>
     <style>
         body {
             background-color: #07090f;
@@ -43,23 +43,21 @@
             display: flex;
             gap: 10px;
             justify-content: center;
+            align-items: center;
         }
-        input[type="text"], button {
+        select, button {
             background: #04060a;
             color: #00ffcc;
             border: 1px solid #00ffcc;
             padding: 8px 12px;
             font-family: monospace;
             border-radius: 5px;
-        }
-        input[type="text"] {
-            width: 60%;
+            cursor: pointer;
         }
         button:hover {
             background: #00ffcc;
             color: #04060a;
             font-weight: bold;
-            cursor: pointer;
         }
         pre {
             text-align: left;
@@ -78,15 +76,21 @@
 <body>
 
     <div class="terminal-box">
-        <h1>[ GITHUB REPO READER ]</h1>
-        <p>Repodaki Dosyayı Doğrudan Çek ve Oku</p>
+        <h1>[ PS4 PAYLOAD LOADER ]</h1>
+        <p>Repo Dosyalarını Seç ve .Bin Olarak Belleğe Çek</p>
         
         <div class="controls">
-            <input type="text" id="filePath" placeholder="örn: payload.js veya test.bin" value="payload.js">
-            <button onclick="fetchRepoFile()">Dosyayı Oku</button>
+            <label for="payloadSelect">Payload Seç:</label>
+            <select id="payloadSelect">
+                <!-- Repona attığın .bin veya .js dosyalarının isimlerini buraya ekleyebilirsin -->
+                <option value="stage1.bin">stage1.bin</option>
+                <option value="stage2.bin">stage2.bin</option>
+                <option value="netcat.bin">netcat.bin</option>
+            </select>
+            <button onclick="fetchAndLoadBin()">Payload'ı Çek ve Yükle</button>
         </div>
 
-        <pre id="log">[*] Sistem hazır. Okumak istediğin dosya adını yaz ve butona bas...\n</pre>
+        <pre id="log">[*] Sistem hazır. Listeden payload seçip yükle butonuna basın...\n</pre>
     </div>
 
     <script>
@@ -96,51 +100,46 @@
             logBox.scrollTop = logBox.scrollHeight;
         }
 
-        async function fetchRepoFile() {
-            const fileName = document.getElementById('filePath').value.trim();
-            if (!fileName) {
-                printLog("[-] Hata: Lütfen bir dosya adı girin!");
-                return;
-            }
+        async function fetchAndLoadBin() {
+            const selectBox = document.getElementById('payloadSelect');
+            const fileName = selectBox.value;
 
-            // Kendi GitHub kullanıcı adını ve repo adını buraya yazıyorsun
-            // Örnek: https://raw.githubusercontent.com/kullaniciadin/repoadin/main/dosyaadi
-            const username = "saatbey2310-bit"; // Ekran görüntüsündeki kullanıcı adından alındı
-            const repo = "saatos"; // Ekran görüntüsündeki repo adından alındı
+            // GitHub repo bilgilerin
+            const username = "saatbey2310-bit";
+            const repo = "saatos";
             const branch = "main";
             
             const rawUrl = `https://raw.githubusercontent.com/${username}/${repo}/${branch}/${fileName}`;
 
-            printLog("\n[*] Dosya talep ediliyor: " + fileName);
-            printLog("[*] URL: " + rawUrl);
+            printLog("\n[*] Talep ediliyor: " + fileName);
+            printLog("[*] Kaynak: " + rawUrl);
 
             try {
+                // Dosyayı ham binary veri (.bin gibi) olarak çekiyoruz
                 const response = await fetch(rawUrl);
                 if (!response.ok) {
-                    throw new Error(`HTTP Hata Kodu: ${response.status} (Dosya bulunamadı!)`);
+                    throw new Error(`HTTP Hata: ${response.status} (Dosya repoda bulunamadı!)`);
                 }
 
-                const contentType = response.headers.get("content-type");
+                const buffer = await response.arrayBuffer();
+                printLog("[+] Dosya başarıyla indirildi!");
+                printLog("[+] Boyut: " + buffer.byteLength + " bayt.");
+
+                // PS4 tarayıcı belleğine (Heap / TypedArray) map etme simülasyonu
+                let payloadView = new Uint8Array(buffer);
                 
-                // Eğer metin tabanlı bir dosyaysa (.js, .txt, .html)
-                if (contentType && contentType.includes("text")) {
-                    const textData = await response.text();
-                    printLog("[+] Dosya başarıyla okundu (Metin):");
-                    printLog("----------------------------------------");
-                    printLog(textData);
-                } else {
-                    // Eğer binary (.bin) bir dosyaysa
-                    const buffer = await response.arrayBuffer();
-                    printLog("[+] Dosya başarıyla okundu (Binary):");
-                    printLog("[+] Boyut: " + buffer.byteLength + " bayt.");
-                    
-                    let view = new Uint8Array(buffer);
-                    let hexPreview = Array.from(view.slice(0, 16)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' ');
-                    printLog("[*] İlk 16 bayt (Hex): " + hexPreview);
-                }
+                // İlk 16 baytlık Hex önizlemesi
+                let hexPreview = Array.from(payloadView.slice(0, 16))
+                    .map(b => '0x' + b.toString(16).padStart(2, '0'))
+                    .join(' ');
+                
+                printLog("[*] Bellek Adresi (Simüle): 0x90c00000");
+                printLog("[*] İlk 16 Bayt (Hex): " + hexPreview);
+                printLog("[+] Durum: Payload yürütmeye hazır!");
 
             } catch (err) {
                 printLog("[-] Hata: " + err.message);
+                printLog("[!] İpucu: Reponda seçtiğin isimde bir dosya olduğundan emin ol.");
             }
         }
     </script>
