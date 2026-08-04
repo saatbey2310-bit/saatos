@@ -3,91 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PS4 Direct .Bin Payload Loader</title>
-    <style>
-        body {
-            background-color: #07090f;
-            color: #00ffcc;
-            font-family: monospace;
-            text-align: center;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        .terminal-box {
-            border: 2px solid #00ffcc;
-            background: #0d121f;
-            padding: 25px;
-            border-radius: 14px;
-            width: 85%;
-            max-width: 650px;
-            box-shadow: 0 0 25px rgba(0, 255, 204, 0.25);
-        }
-        h1 {
-            color: #ff0055;
-            font-size: 20px;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-        p {
-            color: #8ab4f8;
-            font-size: 13px;
-            margin-bottom: 15px;
-        }
-        .controls {
-            margin-bottom: 15px;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            align-items: center;
-        }
-        input[type="text"], button {
-            background: #04060a;
-            color: #00ffcc;
-            border: 1px solid #00ffcc;
-            padding: 8px 12px;
-            font-family: monospace;
-            border-radius: 5px;
-        }
-        input[type="text"] {
-            width: 55%;
-        }
-        button:hover {
-            background: #00ffcc;
-            color: #04060a;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        pre {
-            text-align: left;
-            color: #33ff99;
-            background: #04060a;
-            padding: 12px;
-            border-radius: 8px;
-            height: 200px;
-            overflow-y: auto;
-            border: 1px dashed #224;
-            font-size: 12px;
-            margin: 0;
-        }
-    </style>
+    <title>PS4 Payload Host</title>
+    <!-- CSS dosyasını dışarıdan bağlıyoruz -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div class="terminal-box">
-        <h1>[ PS4 DIRECT .BIN LOADER ]</h1>
-        <p>Repodaki Dosyayı Doğrudan .Bin Olarak Belleğe Çek</p>
+        <h1>[ PS4 PAYLOAD LOADER ]</h1>
+        <p>Terminal Arayüzü & İstasyon Paneli</p>
         
         <div class="controls">
-            <input type="text" id="binName" placeholder="örn: payload.bin" value="payload.bin">
-            <button onclick="fetchBinPayload()">Belleğe Çek</button>
+            <input type="text" id="binName" placeholder="payload.bin" value="payload.bin">
+            <button onclick="fetchBinPayload()">Dosyayı Çek</button>
         </div>
 
-        <pre id="log">[*] Sistem hazır. Çekmek istediğin .bin dosyasının adını yaz ve butona bas...\n</pre>
+        <pre id="log">[*] Sistem hazır. Dosya adı girin ve çekme işlemine başlayın...\n</pre>
     </div>
 
     <script>
@@ -100,46 +31,26 @@
         async function fetchBinPayload() {
             const fileName = document.getElementById('binName').value.trim();
             if (!fileName) {
-                printLog("[-] Hata: Lütfen geçerli bir dosya adı girin!");
+                printLog("[-] Hata: Dosya adı boş bırakılamaz!");
                 return;
             }
 
-            // GitHub kullanıcı adı ve repo bilgilerin
             const username = "saatbey2310-bit";
             const repo = "saatos";
             const branch = "main";
-            
             const rawUrl = `https://raw.githubusercontent.com/${username}/${repo}/${branch}/${fileName}`;
 
-            printLog("\n[*] .Bin dosyası talep ediliyor: " + fileName);
-            printLog("[*] Kaynak URL: " + rawUrl);
+            printLog("\n[*] Talep ediliyor: " + fileName);
 
             try {
-                // Dosyayı doğrudan ham ikili (binary) akış olarak çekiyoruz
                 const response = await fetch(rawUrl);
-                if (!response.ok) {
-                    throw new Error(`HTTP Hata: ${response.status} (Dosya repoda bulunamadı!)`);
-                }
+                if (!response.ok) throw new Error(`HTTP Hata Kodu: ${response.status}`);
 
-                const arrayBuffer = await response.arrayBuffer();
-                printLog("[+] .Bin dosyası başarıyla indirildi ve belleğe alındı!");
-                printLog("[+] Toplam Boyut: " + arrayBuffer.byteLength + " bayt.");
-
-                // Tarayıcı bellek manipülasyonu için Uint8Array görünümü oluşturma
-                const binView = new Uint8Array(arrayBuffer);
-                
-                // İlk 16 baytlık Hex çıktısı (Binary imza kontrolü için)
-                let hexPreview = Array.from(binView.slice(0, 16))
-                    .map(b => '0x' + b.toString(16).padStart(2, '0'))
-                    .join(' ');
-
-                printLog("[*] Hedef Bellek Alanı: Heap (Allocated)");
-                printLog("[*] İlk 16 Bayt (Hex): " + hexPreview);
-                printLog("[+] Durum: Yük başarıyla işlendi, yürütme tetikleyicisi bekleniyor...");
-
+                const buffer = await response.arrayBuffer();
+                printLog("[+] Dosya başarıyla indirildi ve arabelleğe alındı!");
+                printLog("[+] Boyut: " + buffer.byteLength + " bayt.");
             } catch (err) {
-                printLog("[-] Hata: " + err.message);
-                printLog("[!] İpucu: Repona ilgili .bin dosyasını yüklediğinden ve uzantısının doğru olduğundan emin ol.");
+                printLog("[-] Bağlantı Hatası: " + err.message);
             }
         }
     </script>
