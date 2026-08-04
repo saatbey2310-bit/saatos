@@ -3,57 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PS4 Payload Host</title>
-    <!-- CSS dosyasını dışarıdan bağlıyoruz -->
+    <title>Real Binary Payload Loader</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div class="terminal-box">
-        <h1>[ PS4 PAYLOAD LOADER ]</h1>
-        <p>Terminal Arayüzü & İstasyon Paneli</p>
+        <h1>[ REAL .BIN LOADER ]</h1>
+        <p>Ham Binary Dosya Çekme & Bellek Enjeksiyonu</p>
         
         <div class="controls">
             <input type="text" id="binName" placeholder="payload.bin" value="payload.bin">
-            <button onclick="fetchBinPayload()">Dosyayı Çek</button>
+            <button onclick="loadRealBinary()">Dosyayı Ham Çek</button>
         </div>
 
-        <pre id="log">[*] Sistem hazır. Dosya adı girin ve çekme işlemine başlayın...\n</pre>
+        <pre id="log">[*] Sistem hazır. Gerçek .bin dosyasını çekmek için tıkla...\n</pre>
     </div>
 
-    <script>
-        function printLog(msg) {
-            const logBox = document.getElementById('log');
-            logBox.innerText += msg + "\n";
-            logBox.scrollTop = logBox.scrollHeight;
-        }
-
-        async function fetchBinPayload() {
-            const fileName = document.getElementById('binName').value.trim();
-            if (!fileName) {
-                printLog("[-] Hata: Dosya adı boş bırakılamaz!");
-                return;
-            }
-
-            const username = "saatbey2310-bit";
-            const repo = "saatos";
-            const branch = "main";
-            const rawUrl = `https://raw.githubusercontent.com/${username}/${repo}/${branch}/${fileName}`;
-
-            printLog("\n[*] Talep ediliyor: " + fileName);
-
-            try {
-                const response = await fetch(rawUrl);
-                if (!response.ok) throw new Error(`HTTP Hata Kodu: ${response.status}`);
-
-                const buffer = await response.arrayBuffer();
-                printLog("[+] Dosya başarıyla indirildi ve arabelleğe alındı!");
-                printLog("[+] Boyut: " + buffer.byteLength + " bayt.");
-            } catch (err) {
-                printLog("[-] Bağlantı Hatası: " + err.message);
-            }
-        }
-    </script>
-
+    <!-- Mantığı yürütecek harici JavaScript dosyası -->
+    <script src="loader.js"></script>
 </body>
 </html>
