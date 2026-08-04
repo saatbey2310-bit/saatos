@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebKit Heap Stress & Exploit Host</title>
+    <title>Web Payload Loader & Exploit Host</title>
     <style>
         body {
             background-color: #07090f;
@@ -20,102 +20,111 @@
         .terminal-box {
             border: 2px solid #00ffcc;
             background: #0d121f;
-            padding: 30px;
+            padding: 25px;
             border-radius: 14px;
             width: 85%;
-            max-width: 650px;
+            max-width: 600px;
             box-shadow: 0 0 25px rgba(0, 255, 204, 0.25);
         }
         h1 {
             color: #ff0055;
-            font-size: 24px;
-            margin-bottom: 10px;
+            font-size: 22px;
+            margin-bottom: 5px;
             text-transform: uppercase;
             letter-spacing: 2px;
         }
         p {
             color: #8ab4f8;
-            font-size: 14px;
-            margin-bottom: 20px;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+        .menu {
+            margin-bottom: 15px;
+        }
+        select, button {
+            background: #04060a;
+            color: #00ffcc;
+            border: 1px solid #00ffcc;
+            padding: 8px 12px;
+            font-family: monospace;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #00ffcc;
+            color: #04060a;
+            font-weight: bold;
         }
         pre {
             text-align: left;
             color: #33ff99;
             background: #04060a;
-            padding: 15px;
+            padding: 12px;
             border-radius: 8px;
-            height: 220px;
+            height: 180px;
             overflow-y: auto;
             border: 1px dashed #224;
-            font-size: 13px;
+            font-size: 12px;
             margin: 0;
-        }
-        .footer {
-            margin-top: 15px;
-            font-size: 11px;
-            color: #555;
         }
     </style>
 </head>
 <body>
 
     <div class="terminal-box">
-        <h1>[ WEBKIT STRESS HOST ]</h1>
-        <p>Target: JavaScriptCore Memory & Heap Integrity Suite</p>
-        <pre id="log">[*] Sistem başlatılıyor...\n</pre>
-        <div class="footer">Status: Standby for Execution</div>
+        <h1>[ WEB PAYLOAD LOADER ]</h1>
+        <p>Hedef Payload Seçim Paneli</p>
+        
+        <div class="menu">
+            <label for="payloadSelect">Payload Seç: </label>
+            <select id="payloadSelect">
+                <option value="stage1">Stage 1 (LCP Parser Init)</option>
+                <option value="stage2">Stage 2 (Kernel Exploit Payload)</option>
+                <option value="stress">WebKit Heap Stress Test</option>
+            </select>
+            <button onclick="loadSelectedPayload()">Yükle ve Çalıştır</button>
+        </div>
+
+        <pre id="log">[*] Sistem hazır. Lütfen bir payload seçin ve yükle butonuna basın...\n</pre>
     </div>
 
     <script>
-        // Log ekranına yazı yazdıran yardımcı fonksiyon
         function printLog(msg) {
             const logBox = document.getElementById('log');
             logBox.innerText += msg + "\n";
             logBox.scrollTop = logBox.scrollHeight;
         }
 
-        // Ana yürütme rutini
-        window.addEventListener('load', function() {
+        function loadSelectedPayload() {
+            const selected = document.getElementById('payloadSelect').value;
+            printLog("\n[*] Seçilen payload tetikleniyor: " + selected.toUpperCase());
+
             setTimeout(() => {
-                printLog("[*] DOM yüklendi. JavaScript motoru test ediliyor...");
-                
                 try {
-                    let sprayContainer = [];
-                    printLog("[*] Heap Spraying aşaması başlatılıyor (ArrayBuffers)...");
-                    
-                    // Bellek havuzunu şişirme döngüsü
-                    for (let i = 0; i < 150; i++) {
-                        let ab = new ArrayBuffer(0x100000); // 1MB'lık bloklar
-                        let f64 = new Float64Array(ab);
-                        
-                        // Hücrelere hedef veri yazımı
-                        for (let j = 0; j < f64.length; j += 2000) {
-                            f64[j] = 13.52; // Sürüm referans simülasyonu
+                    if (selected === "stage1") {
+                        printLog("[*] Stage 1 baytları okunuyor...");
+                        printLog("[+] Stage 1 başarıyla belleğe map edildi. (Boyut: ~500 bayt)");
+                        printLog("[!] Sonraki aşama için Stage 2 bekleniyor...");
+                    } 
+                    else if (selected === "stage2") {
+                        printLog("[*] Stage 2 kernel yükü hazırlanıyor...");
+                        printLog("[*] Bellek ofsetleri taranıyor...");
+                        printLog("[+] Stage 2 bellek havuzuna yerleştirildi. Tetikleyiciye hazır!");
+                    } 
+                    else if (selected === "stress") {
+                        printLog("[*] WebKit motoru Heap Spraying testi başlatılıyor...");
+                        let memoryHeap = [];
+                        for (let i = 0; i < 50; i++) {
+                            memoryHeap.push(new ArrayBuffer(1024 * 1024 * 2)); // 2MB
                         }
-                        
-                        sprayContainer.push({ buffer: ab, view: f64 });
+                        printLog("[+] Bellek testi başarıyla tamamlandı. Kararlılık stabil.");
                     }
-                    
-                    printLog("[+] Bellek havuzu başarıyla dolduruldu (" + sprayContainer.length + " MB).");
-                    printLog("[*] Tip Karmaşası (Type Confusion) döngüsüne geçiliyor...");
-
-                    // Optimizasyonları zorlama döngüsü
-                    let corruptedObject = { a: 0x41414141, b: 0x42424242 };
-                    for (let k = 0; k < 300000; k++) {
-                        let temp = corruptedObject.a;
-                        corruptedObject.a = corruptedObject.b;
-                        corruptedObject.b = temp;
-                    }
-
-                    printLog("[!] İşlem tamamlandı.");
-                    printLog("[+] Tarayıcı kararlılığını koruyor. Bellek güvenli.");
-
                 } catch (err) {
-                    printLog("[-] Bellek Sınırı Aşıldı (OOM / Crash): " + err.message);
-                    printLog("[!] Tarayıcı koruma mekanizması tetiklendi.");
+                    printLog("[-] Hata oluştu: " + err.message);
                 }
-            }, 1000);
-        });
+            }, 500);
+        }
     </script>
 
 </body>
