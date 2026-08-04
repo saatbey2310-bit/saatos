@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PS4 Web Payload Loader & Fetcher</title>
+    <title>PS4 Direct .Bin Payload Loader</title>
     <style>
         body {
             background-color: #07090f;
@@ -45,19 +45,22 @@
             justify-content: center;
             align-items: center;
         }
-        select, button {
+        input[type="text"], button {
             background: #04060a;
             color: #00ffcc;
             border: 1px solid #00ffcc;
             padding: 8px 12px;
             font-family: monospace;
             border-radius: 5px;
-            cursor: pointer;
+        }
+        input[type="text"] {
+            width: 55%;
         }
         button:hover {
             background: #00ffcc;
             color: #04060a;
             font-weight: bold;
+            cursor: pointer;
         }
         pre {
             text-align: left;
@@ -76,21 +79,15 @@
 <body>
 
     <div class="terminal-box">
-        <h1>[ PS4 PAYLOAD LOADER ]</h1>
-        <p>Repo Dosyalarını Seç ve .Bin Olarak Belleğe Çek</p>
+        <h1>[ PS4 DIRECT .BIN LOADER ]</h1>
+        <p>Repodaki Dosyayı Doğrudan .Bin Olarak Belleğe Çek</p>
         
         <div class="controls">
-            <label for="payloadSelect">Payload Seç:</label>
-            <select id="payloadSelect">
-                <!-- Repona attığın .bin veya .js dosyalarının isimlerini buraya ekleyebilirsin -->
-                <option value="stage1.bin">stage1.bin</option>
-                <option value="stage2.bin">stage2.bin</option>
-                <option value="netcat.bin">netcat.bin</option>
-            </select>
-            <button onclick="fetchAndLoadBin()">Payload'ı Çek ve Yükle</button>
+            <input type="text" id="binName" placeholder="örn: payload.bin" value="payload.bin">
+            <button onclick="fetchBinPayload()">Belleğe Çek</button>
         </div>
 
-        <pre id="log">[*] Sistem hazır. Listeden payload seçip yükle butonuna basın...\n</pre>
+        <pre id="log">[*] Sistem hazır. Çekmek istediğin .bin dosyasının adını yaz ve butona bas...\n</pre>
     </div>
 
     <script>
@@ -100,46 +97,49 @@
             logBox.scrollTop = logBox.scrollHeight;
         }
 
-        async function fetchAndLoadBin() {
-            const selectBox = document.getElementById('payloadSelect');
-            const fileName = selectBox.value;
+        async function fetchBinPayload() {
+            const fileName = document.getElementById('binName').value.trim();
+            if (!fileName) {
+                printLog("[-] Hata: Lütfen geçerli bir dosya adı girin!");
+                return;
+            }
 
-            // GitHub repo bilgilerin
+            // GitHub kullanıcı adı ve repo bilgilerin
             const username = "saatbey2310-bit";
             const repo = "saatos";
             const branch = "main";
             
             const rawUrl = `https://raw.githubusercontent.com/${username}/${repo}/${branch}/${fileName}`;
 
-            printLog("\n[*] Talep ediliyor: " + fileName);
-            printLog("[*] Kaynak: " + rawUrl);
+            printLog("\n[*] .Bin dosyası talep ediliyor: " + fileName);
+            printLog("[*] Kaynak URL: " + rawUrl);
 
             try {
-                // Dosyayı ham binary veri (.bin gibi) olarak çekiyoruz
+                // Dosyayı doğrudan ham ikili (binary) akış olarak çekiyoruz
                 const response = await fetch(rawUrl);
                 if (!response.ok) {
                     throw new Error(`HTTP Hata: ${response.status} (Dosya repoda bulunamadı!)`);
                 }
 
-                const buffer = await response.arrayBuffer();
-                printLog("[+] Dosya başarıyla indirildi!");
-                printLog("[+] Boyut: " + buffer.byteLength + " bayt.");
+                const arrayBuffer = await response.arrayBuffer();
+                printLog("[+] .Bin dosyası başarıyla indirildi ve belleğe alındı!");
+                printLog("[+] Toplam Boyut: " + arrayBuffer.byteLength + " bayt.");
 
-                // PS4 tarayıcı belleğine (Heap / TypedArray) map etme simülasyonu
-                let payloadView = new Uint8Array(buffer);
+                // Tarayıcı bellek manipülasyonu için Uint8Array görünümü oluşturma
+                const binView = new Uint8Array(arrayBuffer);
                 
-                // İlk 16 baytlık Hex önizlemesi
-                let hexPreview = Array.from(payloadView.slice(0, 16))
+                // İlk 16 baytlık Hex çıktısı (Binary imza kontrolü için)
+                let hexPreview = Array.from(binView.slice(0, 16))
                     .map(b => '0x' + b.toString(16).padStart(2, '0'))
                     .join(' ');
-                
-                printLog("[*] Bellek Adresi (Simüle): 0x90c00000");
+
+                printLog("[*] Hedef Bellek Alanı: Heap (Allocated)");
                 printLog("[*] İlk 16 Bayt (Hex): " + hexPreview);
-                printLog("[+] Durum: Payload yürütmeye hazır!");
+                printLog("[+] Durum: Yük başarıyla işlendi, yürütme tetikleyicisi bekleniyor...");
 
             } catch (err) {
                 printLog("[-] Hata: " + err.message);
-                printLog("[!] İpucu: Reponda seçtiğin isimde bir dosya olduğundan emin ol.");
+                printLog("[!] İpucu: Repona ilgili .bin dosyasını yüklediğinden ve uzantısının doğru olduğundan emin ol.");
             }
         }
     </script>
