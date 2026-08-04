@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Payload Loader & Exploit Host</title>
+    <title>Binary & JS Payload Loader</title>
     <style>
         body {
             background-color: #07090f;
@@ -23,12 +23,12 @@
             padding: 25px;
             border-radius: 14px;
             width: 85%;
-            max-width: 600px;
+            max-width: 650px;
             box-shadow: 0 0 25px rgba(0, 255, 204, 0.25);
         }
         h1 {
             color: #ff0055;
-            font-size: 22px;
+            font-size: 20px;
             margin-bottom: 5px;
             text-transform: uppercase;
             letter-spacing: 2px;
@@ -38,10 +38,19 @@
             font-size: 13px;
             margin-bottom: 15px;
         }
-        .menu {
+        .controls {
             margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
         }
-        select, button {
+        .row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        select, input[type="file"], button {
             background: #04060a;
             color: #00ffcc;
             border: 1px solid #00ffcc;
@@ -49,7 +58,6 @@
             font-family: monospace;
             border-radius: 5px;
             cursor: pointer;
-            margin: 5px;
         }
         button:hover {
             background: #00ffcc;
@@ -73,20 +81,27 @@
 <body>
 
     <div class="terminal-box">
-        <h1>[ WEB PAYLOAD LOADER ]</h1>
-        <p>Hedef Payload Seçim Paneli</p>
+        <h1>[ BIN & JS PAYLOAD LOADER ]</h1>
+        <p>Yerel Dosya Okuyucu ve Bellek Enjeksiyon Paneli</p>
         
-        <div class="menu">
-            <label for="payloadSelect">Payload Seç: </label>
-            <select id="payloadSelect">
-                <option value="stage1">Stage 1 (LCP Parser Init)</option>
-                <option value="stage2">Stage 2 (Kernel Exploit Payload)</option>
-                <option value="stress">WebKit Heap Stress Test</option>
-            </select>
-            <button onclick="loadSelectedPayload()">Yükle ve Çalıştır</button>
+        <div class="controls">
+            <div class="row">
+                <label for="payloadSelect">Hazır Seçenek:</label>
+                <select id="payloadSelect">
+                    <option value="stage1">Stage 1 (Simüle Edilmiş Baytlar)</option>
+                    <option value="stage2">Stage 2 (Kernel Yükü)</option>
+                </select>
+                <button onclick="loadPreset()">Çalıştır</button>
+            </div>
+            
+            <div class="row">
+                <label for="fileInput">Özel .bin / .js Seç:</label>
+                <input type="file" id="fileInput" accept=".bin,.js">
+                <button onclick="loadLocalFile()">Dosyayı Oku</button>
+            </div>
         </div>
 
-        <pre id="log">[*] Sistem hazır. Lütfen bir payload seçin ve yükle butonuna basın...\n</pre>
+        <pre id="log">[*] Sistem hazır. Dosya seçin veya hazır paketlerden birini çalıştırın...\n</pre>
     </div>
 
     <script>
@@ -96,34 +111,48 @@
             logBox.scrollTop = logBox.scrollHeight;
         }
 
-        function loadSelectedPayload() {
+        function loadPreset() {
             const selected = document.getElementById('payloadSelect').value;
-            printLog("\n[*] Seçilen payload tetikleniyor: " + selected.toUpperCase());
-
+            printLog("\n[*] Seçilen hazır paket okunuyor: " + selected.toUpperCase());
+            
             setTimeout(() => {
-                try {
-                    if (selected === "stage1") {
-                        printLog("[*] Stage 1 baytları okunuyor...");
-                        printLog("[+] Stage 1 başarıyla belleğe map edildi. (Boyut: ~500 bayt)");
-                        printLog("[!] Sonraki aşama için Stage 2 bekleniyor...");
-                    } 
-                    else if (selected === "stage2") {
-                        printLog("[*] Stage 2 kernel yükü hazırlanıyor...");
-                        printLog("[*] Bellek ofsetleri taranıyor...");
-                        printLog("[+] Stage 2 bellek havuzuna yerleştirildi. Tetikleyiciye hazır!");
-                    } 
-                    else if (selected === "stress") {
-                        printLog("[*] WebKit motoru Heap Spraying testi başlatılıyor...");
-                        let memoryHeap = [];
-                        for (let i = 0; i < 50; i++) {
-                            memoryHeap.push(new ArrayBuffer(1024 * 1024 * 2)); // 2MB
-                        }
-                        printLog("[+] Bellek testi başarıyla tamamlandı. Kararlılık stabil.");
-                    }
-                } catch (err) {
-                    printLog("[-] Hata oluştu: " + err.message);
+                if (selected === "stage1") {
+                    printLog("[+] Stage 1 başarıyla yüklendi. Boyut: 499 bayt.");
+                } else {
+                    printLog("[+] Stage 2 başarıyla yüklendi. Boyut: 356 bayt.");
                 }
-            }, 500);
+            }, 400);
+        }
+
+        function loadLocalFile() {
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput.files.length === 0) {
+                printLog("[-] Hata: Lütfen önce bir dosya seçin!");
+                return;
+            }
+
+            const file = fileInput.files[0];
+            printLog("\n[*] Dosya okunuyor: " + file.name);
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const buffer = e.target.result;
+                printLog("[+] Dosya başarıyla belleğe aktarıldı!");
+                printLog("[+] Dosya Boyutu: " + buffer.byteLength + " bayt.");
+                
+                // İstersen ArrayBuffer üzerinden bayt analizi simülasyonu
+                let view = new Uint8Array(buffer);
+                printLog("[*] İlk 4 bayt (Hex): " + 
+                    Array.from(view.slice(0, 4)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' ')
+                );
+            };
+
+            reader.onerror = function() {
+                printLog("[-] Dosya okuma hatası!");
+            };
+
+            // Dosyayı ham binary veri (ArrayBuffer) olarak okuyoruz
+            reader.readAsArrayBuffer(file);
         }
     </script>
 
