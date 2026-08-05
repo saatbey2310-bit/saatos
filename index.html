@@ -3,7 +3,46 @@
 <head>
     <meta charset="utf-8">
     <title>PS4 13.52 CSS Exploit Vector</title>
-    <link rel="stylesheet" href="includes/style.css">
+    <style>
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .exploit-container {
+            text-align: center;
+            border: 1px solid #30363d;
+            padding: 2.5rem;
+            border-radius: 8px;
+            background-color: #161b22;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+        h1 {
+            color: #58a6ff;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        h2 {
+            font-family: 'ExploitFont', sans-serif;
+            color: #f85149;
+            font-size: 1.2rem;
+        }
+        p {
+            color: #8b949e;
+            font-size: 0.95rem;
+        }
+    </style>
+    <style>
+        @font-face {
+            font-family: 'ExploitFont';
+            src: url('exploit.woff');
+        }
+    </style>
 </head>
 <body>
     <div class="exploit-container">
@@ -12,6 +51,36 @@
         <p>Tarayıcı belleği manipüle ediliyor, lütfen bekleyin.</p>
     </div>
 
-    <script src="includes/script.js"></script>
+    <script>
+        console.log("[*] Inline script başlatıldı...");
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            const statusText = document.getElementById('status-text');
+            
+            if (!statusText) return;
+
+            statusText.innerText = "Bellek hazırlanıyor...";
+
+            const safetyTimeout = setTimeout(() => {
+                statusText.innerText = "Zaman aşımı: Akışa devam ediliyor...";
+                console.log("[!] Zaman aşımı tetiklendi.");
+            }, 3000);
+
+            try {
+                document.fonts.load('16px ExploitFont').then(() => {
+                    clearTimeout(safetyTimeout);
+                    statusText.innerText = "Font yüklendi!";
+                    console.log("[+] Font başarıyla yüklendi.");
+                }).catch((err) => {
+                    clearTimeout(safetyTimeout);
+                    statusText.innerText = "Zafiyet tetikleme döngüsü tamamlandı!";
+                    console.log("[!] Hata/Yakalama: ", err);
+                });
+            } catch (e) {
+                clearTimeout(safetyTimeout);
+                console.error("[-] İstisna: ", e);
+            }
+        });
+    </script>
 </body>
 </html>
