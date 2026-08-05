@@ -1,118 +1,17 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html manifest="cache.manifest">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PS4 Fuzzer & Binary Launcher</title>
-    <link rel="stylesheet" href="style.css">
+    <meta charset="utf-8">
+    <title>PS4 13.52 CSS Exploit Vector</title>
+    <link rel="stylesheet" href="includes/style.css">
 </head>
 <body>
-
-    <div class="terminal-box">
-        <h1>[ SAATOS FUZZER & LOADER ]</h1>
-        <p>JavaScript Fuzzing & Saf Binary Enjeksiyon Paneli</p>
-        
-        <div class="controls">
-            <input type="text" id="binName" placeholder="payload.bin" value="payload.bin">
-            <!-- Fonksiyonlara bağlanan iki ayrı kontrol butonu -->
-            <button onclick="startFuzzer()">Fuzzing Başlat</button>
-            <button class="btn-trigger" onclick="loadAndExecutePayload()">Payload Başlat</button>
-        </div>
-
-        <pre id="log">[*] Sistem hazır. İşlem yapmak için uygun butona basın...\n</pre>
+    <div class="exploit-container">
+        <h1>PlayStation 4 - WebKit / CSS UAF Yükleyicisi</h1>
+        <h2 id="status-text">Yükleniyor...</h2>
+        <p>Tarayıcı belleği manipüle ediliyor, lütfen bekleyin.</p>
     </div>
 
-    <script>
-        function log(msg) {
-            const logBox = document.getElementById('log');
-            logBox.innerText += msg + "\n";
-            logBox.scrollTop = logBox.scrollHeight;
-        }
-
-        // 1. Fuzzer Motoru
-        async function startFuzzer() {
-            const targetBaseUrl = document.getElementById('binName').value.trim() || "payload.bin";
-            
-            log("\n[!] Fuzzer motoru ateşlendi...");
-            log("[*] Hedef Taban: " + targetBaseUrl);
-
-            const fuzzPayloads = [
-                targetBaseUrl,
-                "../" + targetBaseUrl,
-                "%2e%2e/" + targetBaseUrl,
-                "A".repeat(128),
-                "\x00" + targetBaseUrl,
-                targetBaseUrl + "\x00.txt",
-                "../../../../etc/passwd",
-                "fuzz_test_" + Math.random().toString(36).substring(7)
-            ];
-
-            log("[*] Toplam " + fuzzPayloads.length + " mutasyon test ediliyor...\n");
-
-            for (let i = 0; i < fuzzPayloads.length; i++) {
-                const currentTest = fuzzPayloads[i];
-                const testUrl = `https://raw.githubusercontent.com/saatbey2310-bit/saatos/main/${currentTest}`;
-
-                try {
-                    const startTimestamp = performance.now();
-                    const response = await fetch(testUrl, { method: 'GET' });
-                    const duration = (performance.now() - startTimestamp).toFixed(2);
-
-                    if (response.ok) {
-                        log(`[+] [HIT] Durum: ${response.status} | Süre: ${duration}ms | Girdi: ${currentTest}`);
-                    } else {
-                        log(`[-] [MISS] Durum: ${response.status} | Girdi: ${currentTest}`);
-                    }
-                } catch (err) {
-                    log(`[!] [ERROR] İstek başarısız: ${currentTest} (${err.message})`);
-                }
-            }
-
-            log("\n[+] Fuzzing taraması tamamlandı!");
-        }
-
-        // 2. Ham payload.bin Başlatıcı ve İşleyici
-        async function loadAndExecutePayload() {
-            const fileName = document.getElementById('binName').value.trim() || "payload.bin";
-            const username = "saatbey2310-bit";
-            const repo = "saatos";
-            const branch = "main";
-            const rawUrl = `https://raw.githubusercontent.com/${username}/${repo}/${branch}/${fileName}`;
-
-            log("\n[!] Payload başlatma komutu verildi...");
-            log("[*] Hedef Binary: " + rawUrl);
-
-            try {
-                const response = await fetch(rawUrl);
-                if (!response.ok) {
-                    throw new Error(`HTTP Hata Kodu: ${response.status} (Dosya çekilemedi!)`);
-                }
-
-                // Saf binary verisini ArrayBuffer olarak alıyoruz
-                const rawBuffer = await response.arrayBuffer();
-                if (rawBuffer.byteLength === 0) {
-                    throw new Error("Payload dosyası boş (0 bayt)!");
-                }
-
-                log("[+] Başarılı! payload.bin ham olarak yüklendi.");
-                log("[+] Toplam Boyut: " + rawBuffer.byteLength + " bayt.");
-
-                // Uint8Array ile saf bayt analizi
-                const pureBytes = new Uint8Array(rawBuffer);
-                let hexOutput = [];
-                for (let i = 0; i < Math.min(pureBytes.length, 16); i++) {
-                    hexOutput.push('0x' + pureBytes[i].toString(16).padStart(2, '0'));
-                }
-
-                log("[*] Bellek Havuzu: Aktif (TypedArray)");
-                log("[*] İlk 16 Ham Bayt: " + hexOutput.join(' '));
-                log("[+] Boom! Payload JavaScript belleğinde çalıştırılmak üzere hazırlandı 💀");
-
-            } catch (err) {
-                log("[-] Kritik Hata: " + err.message);
-            }
-        }
-    </script>
-
+    <script src="includes/script.js"></script>
 </body>
 </html>
