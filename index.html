@@ -1,86 +1,48 @@
 <!DOCTYPE html>
-<html manifest="cache.manifest">
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>PS4 13.52 CSS Exploit Vector</title>
+    <meta charset="UTF-8">
+    <title>Custom SlopKit Loader 💀</title>
     <style>
         body {
-            background-color: #0d1117;
-            color: #c9d1d9;
+            background-color: #0b0f19;
+            color: #00ffcc;
             font-family: monospace;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
+            padding: 40px;
         }
-        .exploit-container {
-            text-align: center;
-            border: 1px solid #30363d;
-            padding: 2.5rem;
-            border-radius: 8px;
-            background-color: #161b22;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-        }
-        h1 {
-            color: #58a6ff;
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-        }
-        h2 {
-            font-family: 'ExploitFont', sans-serif;
-            color: #f85149;
-            font-size: 1.2rem;
-        }
-        p {
-            color: #8b949e;
-            font-size: 0.95rem;
-        }
-    </style>
-    <style>
-        @font-face {
-            font-family: 'ExploitFont';
-            src: url('exploit.woff');
+        h1 { color: #ff5555; }
+        #console-log {
+            background: #111625;
+            border: 1px solid #1f293d;
+            padding: 20px;
+            border-radius: 6px;
+            height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
         }
     </style>
 </head>
 <body>
-    <div class="exploit-container">
-        <h1>PlayStation 4 - WebKit / CSS UAF Yükleyicisi</h1>
-        <h2 id="status-text">Yükleniyor...</h2>
-        <p>Tarayıcı belleği manipüle ediliyor, lütfen bekleyin.</p>
-    </div>
+    <h1>Custom Userland Test Ortamı 🚀</h1>
+    <p>Vanguard yine çıldırmış gibi bellek adreslerini bekliyoruz...</p>
+    <div id="console-log"></div>
 
     <script>
-        console.log("[*] Inline script başlatıldı...");
-        
-        window.addEventListener('DOMContentLoaded', () => {
-            const statusText = document.getElementById('status-text');
+        function logToScreen(message) {
+            const logDiv = document.getElementById('console-log');
+            logDiv.innerHTML += `> ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        window.onload = function() {
+            logToScreen("WebKit ortamı başlatıldı.");
+            logToScreen("Offsets dosyası kontrol ediliyor...");
             
-            if (!statusText) return;
-
-            statusText.innerText = "Bellek hazırlanıyor...";
-
-            const safetyTimeout = setTimeout(() => {
-                statusText.innerText = "Zaman aşımı: Akışa devam ediliyor...";
-                console.log("[!] Zaman aşımı tetiklendi.");
-            }, 3000);
-
-            try {
-                document.fonts.load('16px ExploitFont').then(() => {
-                    clearTimeout(safetyTimeout);
-                    statusText.innerText = "Font yüklendi!";
-                    console.log("[+] Font başarıyla yüklendi.");
-                }).catch((err) => {
-                    clearTimeout(safetyTimeout);
-                    statusText.innerText = "Zafiyet tetikleme döngüsü tamamlandı!";
-                    console.log("[!] Hata/Yakalama: ", err);
-                });
-            } catch (e) {
-                clearTimeout(safetyTimeout);
-                console.error("[-] İstisna: ", e);
-            }
-        });
+            // Buraya kendi exploit tetikleme veya offset yükleme JS kodlarını ekleyebilirsin
+            setTimeout(() => {
+                logToScreen("⚠️ Uyarı: Bellek sınırları zorlanıyor...");
+            }, 1500);
+        };
     </script>
 </body>
 </html>
